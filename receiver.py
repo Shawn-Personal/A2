@@ -4,29 +4,31 @@ import time
 import socket
 
 def main(argv):
-    if (len(argv) != 4):
-        return "Does not have 4 arguments"
-    emulator_addr = argv[0]
-    emulator_port = int(argv[1])
+    if (len(argv) != 5):
+        return "Does not have 5 arguments"
+    emulator_addr = argv[1]
+    emulator_port = int(argv[2])
     emulator_pair = (emulator_addr, emulator_port)
-    receiver_port = int(argv[2])
-    file_name = open(argv[3], "w+")
+    receiver_port = int(argv[3])
+    file_name = open(argv[4], "w+")
     arrival_log = open("arrival.log", "w+")
     #keeps all the data of packet seqnum at the index seqnum, "" for packets data that was not recevied
     packets = []
     #keep all the acked number 0 is not acked, 1 is acked
     acked = []
     for i in range(0, 30):
-        packets[i] = ""
-        acked[i] = 0
-    
+        packets.append("")
+        acked.append(0)
+    #set up next loop
     receiverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     receiverSocket.bind(("", receiver_port))
     while True:
+        info = ""
         try:
             info, addr = receiverSocket.recvfrom(1024)
         except:
-            return "Something went wrong with receiving the packets"
+            #listen to next loop
+            continue
         #pasrse the packet
         package = Packet.parseUDPdata(info)
         #get the packet info

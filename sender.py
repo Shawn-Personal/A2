@@ -4,54 +4,68 @@ import time
 import socket
 
 def main(argv):
-    #if less or more argument than 5 is inputed, return the program
-    if (len(argv) != 5):
-        return "Incorrect Number of Arguments"
     #setting up the arguments
-    emulator_host_addr = argv[0]
-    emulator_receive_port = int(argv[1])
-    sender_receive_port = int(argv[2])
+    emulator_host_addr = argv[1]
+    emulator_receive_port = int(argv[2])
+    sender_receive_port = int(argv[3])
     emulator_pair = (emulator_host_addr, emulator_receive_port)
-    timeout = int(argv[3])
+    timeout = int(argv[4])
+    timeout = float(timeout/1000)
     #open all files and logs
-    file_name = open(argv[4], "w+")
+    file_name = open(argv[5], "r")
     seqnum_log = open("seqnum.log", "w+")
     ack_log = open("ack.log", "w+")
     #Create UDP sender to send packets to emulator
     senderSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     #open listen port
     senderSocket.bind(("", sender_receive_port))
-    #put socket on non-blocking mode
-    senderSocket.setblocking(0)
-    #if timer is currently running
-    timer_on = False
-    #is EOT pack is ready (see if it's final ACK)
-    eot_ready = False
-    #Placeholder for EOT Packet in pickle.dump form
-    eot = ""
     #max window package size
     window_max = 30
+    all_acked = False
     #windows oldest send package unacked seqnum
     base = 0
-    #next package to be sent
-    nextseqnum = 0
     #create index of packets
-    packets_range = []
+    packets = []
     #keep all the acked number 0 is not acked, 1 is acked
     acked = []
-    #creating a list of 30 Placeholder index to be replaced by sent Packets after pickled
-    for i in range(0, 30):
-        packets_range.append(i)
-        #setting all the package to non-acked
-        acked[i] = 0
+    #creating a list of n Placeholder index to be replaced by sent Packets after pickled
+    data = file_name.read(max_length)
+    index = 0
+    #create all the packets and set all the acks to 0
+    while (data):
+        packets.append(pickle.dumps(Packet.createPacket(seqnum=index, data=data)))
+        acked.append(0)
+        index = index + 1
+        data = file_name.read(max_length)
+        print("finished setup packets")
+    #read file done, close it
+    file_name.close()
+    #send all the acks
+    counter = 0
+    print("Before sending all packets")
+    for send_data in packets:
+        #check if the window is 
+        if (counter <= window_max):
+            #send all the packets
+            senderSocket.sendto(send_data, emulator_pair)
+            seqnum_log.write(str(counter) + "\n")
+        counter = counter + 1
+    print("After sending all packets")
+
     while True:
-        #if all all package is sent and acked
-        if (eot_ready and (base == nextseqnum)):
+        print("In Loop")
+        #if all packets are acked
+        if (all_acked):
+            print("In all Acked Case")
+            #create and prepare EOT for send
+            eot = pickle.dumps(Packet.createEOT(index))
+            #send to emulator
             senderSocket.sendto(eot, emulator_pair)
-            seqnum_log.write(str(nextseqnum) + "\n")
             break
         try:
+            print("In try case")
             #check for ack recevive
+            senderSocket.settimeout(timeout)
             ack, addr = senderSocket.recvfrom(1024)
             #unparsing Packet Object
             info = Packet.parseUDPdata(ack)
@@ -59,81 +73,45 @@ def main(argv):
             packet_seqnum = int(info.getSeqnum())
             #log it
             ack_log.write(str(packet_seqnum) + "\n")
-            acked[int(packet_seqnum)] = 1
+            acked[packet_seqnum] = 1
             #find the lowest non acked packet seqnum as base
             if (base == packet_seqnum):
-                original_base = base
-                index = 0
-                while (index < 30):
-                    if (acked[index] == 0):
-                        base = index
-                        break
-                    index = index + 1
                 #if all are acked, end it
-                if (original_base == base):
-                    base = nextseqnum
+                all_ack = True
+                for pos in range(0, index):
+                    if (acked[pos] == 0):
+                        all_ack = False
+                        base = pos
+                        break
+                if (all_ack):
+                    base = index
 
             #All Acked
-            if (base == nextseqnum):
-                #close timer
-                timer_on = False
-            else:
-                #turn on timer
-                timer = time.time()
-                timer_on = True
-            continue
+            if (base == index):
+                all_acked = True
+            print("After acked")
         #socket error pass
         except socket.error:
-            pass
-        #check if timed out
-        if ((timer_on) and (time.time() - timer > timeout)):
-            #restart timer
-            timer = time.time()
-            #temporary variable
+            print("In except case")
             tempbase = base
-            #retrasmit all the non-acked packets
-            while (tempbase != nextseqnum):
-                #if the packet is not acked
-                if (acked[tempbase] == 0):
-                    #send packet
-                    senderSocket.sendto(packets_range[tempbase], emulator_pair)
-                    #log seqnum sent
-                    seqnum_log.write(str(tempbase) + "\n")
-                    #increment to send next packet
+            #resend all packets
+            while (tempbase != index):
+                #check if the window size is enough
+                if (window_max - base <= window_max):
+                    #if the packet is not acked
+                    if (acked[tempbase] == 0):
+                        #send packet
+                        senderSocket.sendto(packets[tempbase], emulator_pair)
+                        #log seqnum sent
+                        seqnum_log.write(str(tempbase) + "\n")
                 tempbase = tempbase + 1
-        #check if the packet about to send is in the window
-        elif (nextseqnum < base + window_max):
-            #read max_length of characters from file
-            send_data = file_name.read(max_length)
-            #if no chacter to read, start EOT process
-            if (len(send_data) == 0):
-                #set eot
-                eot = pickle.dumps(Packet.createEOT(nextseqnum))
-                #set eot ready
-                eot_ready = True
-            else:
-                #create the packet and process it for udp
-                package = pickle.dumps(Packet.createPacket(seqnum=nextseqnum, data=send_data))
-                #send the packet with nextsequm seqnum
-                senderSocket.sendto(package, emulator_pair)
-                #log the seqnum
-                seqnum_log.write(str(nextseqnum) + "\n")
-                #store the packet for retrasmite case
-                packets_range[nextseqnum] = package
-                #restart timer and to go to the next seqnum
-                if (base == nextseqnum):
-                    timer = time.time()
-                    timer_on = True
-                nextseqnum = nextseqnum + 1
-
-    #All the Ack recevied besides the EOT
-    #block the socket -  until receive the last EOT call back
-    senderSocket.setblocking(1)
-    #listen for udp
+    
+    #waiting for last ACK
+    print("At the end")
+    senderSocket.settimeout(None)
     eot, addr = senderSocket.recvfrom(1024)
-    #Close all the Socket and file reads
+    #close all sockets and files
     senderSocket.close()
-    file_name.close()
     seqnum_log.close()
     ack_log.close()
 
