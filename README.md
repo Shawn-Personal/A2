@@ -2,7 +2,7 @@
 Since this is all in python, no make file is needed.
 The packet is Format is respected by the constructor function. However there is no way to set type to a in python that I know of. 
 # Tested on and built on
-#Make sure to include the packet.py in the same folder as nEmulator.py, sender.py and receiver.py! otherwise the programs fails
+Make sure to include the packet.py in the same folder as nEmulator.py, sender.py and receiver.py! otherwise the programs fails
 # 
 Host1: ubuntu1804-008.student.cs.uwaterloo.ca
 python3 nEmulator.py 9941 ubuntu1804-002.student.cs.uwaterloo.ca 9944 9943 ubuntu1804-004.student.cs.uwaterloo.ca 9942 0.2 1
