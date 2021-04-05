@@ -17,9 +17,9 @@ Host3: ubuntu1804-004.student.cs.uwaterloo.ca
 python3 sender.py ubuntu1804-008.student.cs.uwaterloo.ca 9941 9942 50 number.txt
 
 #How to Run the files
-# 
+#
 nEmulator: python3 nEmulator.py <emulator's receiving UDP port number in the forward (sender) direction> <receiver’s network address> <receiver’s receiving UDP port number> <emulator's receiving UDP port number in the backward (receiver) direction> <sender’s network address> <sender’s receiving UDP port number> <packet discard probability (decimal eg. 0.50 for 50% packet drop)> <verbose-mode>
-# 
+#
 Receiver: python3 receiver.py <hostname for the network emulator> <DP port number used by the link emulator to receive ACKs from the receiver> <UDP port number used by the receiver  to  receive  data  from  the  emulator> <name of the file into which the received data is written>
-# 
+#
 sender: python3 sender.py <host  address  of  the  network  emulator> <UDP  port  number  used  by  the  emulator  to receive data from the sender> <UDP port number used by the sender to receive ACKs from the emulator> <timeout interval in units of millisecond> <name of the file to be transferred>
