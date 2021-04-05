@@ -16,11 +16,11 @@ def listen_to_sender(senderSocket, receiver_pair, pack_discard_probability, verb
         # if the packet is EOT
         if (packet_type == 2):
             if (verbose_mode == 1):
-                print("Receiving EOT From Sender" + "\n")
+                print("Receiving EOT From Sender with seqnum: " + str(packet_seqnum) + "\n")
             # send the packet
             senderSocket.sendto(sender_package, receiver_pair)
             if (verbose_mode == 1):
-                print("Sending EOT To Receiver" + "\n")
+                print("Sending EOT To Receiver with seqnum: " + str(packet_seqnum) + "\n")
         # data packet
         elif (packet_type == 1):
             if (verbose_mode == 1):
@@ -51,11 +51,11 @@ def listen_to_receiver(receiverSocket, sender_pair, pack_discard_probability, ve
         # if the packet is EOT
         if (packet_type == 2):
             if (verbose_mode == 1):
-                print("Receiving EOT From Receiver" + "\n")
+                print("Receiving EOT From Receiver with seqnum " + str(packet_seqnum) + "\n")
             # send the packet
             receiverSocket.sendto(receiver_package, sender_pair)
             if (verbose_mode == 1):
-                print("Sending EOT To Sender" + "\n")
+                print("Sending EOT To Sender with seqnum: " + str(packet_seqnum) + "\n")
             return True
         # ack packet
         elif (packet_type == 0):
@@ -75,7 +75,6 @@ def listen_to_receiver(receiverSocket, sender_pair, pack_discard_probability, ve
                     print("Droped ACK from Receiver, seqnum=" + str(packet_seqnum) + "\n")
             return False
     except socket.error:
-
         return False
 
 def main(argv):
@@ -92,9 +91,11 @@ def main(argv):
     # port to receive from the sender
     senderSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     senderSocket.bind(("", emualtor_sender_udp_port))
+    senderSocket.setblocking(False)
     # port to receive from the receiver
     receiverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     receiverSocket.bind(("", emualtor_receiver_udp_port))
+    receiverSocket.setblocking(False)
 
     last_eot_sent = False
 

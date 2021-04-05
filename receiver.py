@@ -53,6 +53,8 @@ def main(argv):
                 packets[packet_seqnum] = packet_data
                 #ack the packet in index seqnum in list acked
                 acked[packet_seqnum] = 1
+                ack_message = pickle.dumps(Packet.createACK(packet_seqnum))
+                receiverSocket.sendto(ack_message, emulator_pair)
             #packets was ack but got lost
             else:
                 #create ack message

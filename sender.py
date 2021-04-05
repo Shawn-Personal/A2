@@ -29,20 +29,18 @@ def main(argv):
     #keep all the acked number 0 is not acked, 1 is acked
     acked = []
     #creating a list of n Placeholder index to be replaced by sent Packets after pickled
-    data = file_name.read(max_length)
+    data = file_name.read(500)
     index = 0
     #create all the packets and set all the acks to 0
     while (data):
         packets.append(pickle.dumps(Packet.createPacket(seqnum=index, data=data)))
         acked.append(0)
         index = index + 1
-        data = file_name.read(max_length)
-        print("finished setup packets")
+        data = file_name.read(500)
     #read file done, close it
     file_name.close()
     #send all the acks
     counter = 0
-    print("Before sending all packets")
     for send_data in packets:
         #check if the window is 
         if (counter <= window_max):
@@ -50,20 +48,16 @@ def main(argv):
             senderSocket.sendto(send_data, emulator_pair)
             seqnum_log.write(str(counter) + "\n")
         counter = counter + 1
-    print("After sending all packets")
 
     while True:
-        print("In Loop")
         #if all packets are acked
         if (all_acked):
-            print("In all Acked Case")
             #create and prepare EOT for send
             eot = pickle.dumps(Packet.createEOT(index))
             #send to emulator
             senderSocket.sendto(eot, emulator_pair)
             break
         try:
-            print("In try case")
             #check for ack recevive
             senderSocket.settimeout(timeout)
             ack, addr = senderSocket.recvfrom(1024)
@@ -89,10 +83,8 @@ def main(argv):
             #All Acked
             if (base == index):
                 all_acked = True
-            print("After acked")
         #socket error pass
         except socket.error:
-            print("In except case")
             tempbase = base
             #resend all packets
             while (tempbase != index):
@@ -107,7 +99,6 @@ def main(argv):
                 tempbase = tempbase + 1
     
     #waiting for last ACK
-    print("At the end")
     senderSocket.settimeout(None)
     eot, addr = senderSocket.recvfrom(1024)
     #close all sockets and files
